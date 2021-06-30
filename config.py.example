@@ -1,0 +1,9 @@
+# This is the 'config-file' for telegram-losungen.
+# Copy this file to 'config.py' and paste your Telegram-Bot-API-Key and you're good to go.
+# If you want you can change the 'DB' value to anything that SQLAlchemy understands.
+# If you do that, you might need to install additional python modules for the database.
+
+cfg = {
+    "API_KEY": "PASTE_YOUR_TOKEN_HERE",
+    "DB": "sqlite+pysqlite:///losungen.sqlite",
+}
