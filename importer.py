@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import os
 import re
 import requests
+from sqlalchemy import extract
 from losungen import Session
 from losungen.models import TagesLosung
 
@@ -74,8 +75,17 @@ def import_xml(filename=LOSUNGEN_XML):
     session.commit()
 
 
-def import_year(year=datetime.date.today().year + 1):
-    """Downloads, extracts and imports the Losungen"""
+def import_year(year=None):
+    """Downloads, extracts and imports the Losungen of a given year.
+    The year defaults to the next year."""
+    session = Session()
+    year = datetime.date.today().year + 1 if year is None else year
+    losungen = session.query(TagesLosung).filter(extract('year', TagesLosung.date) == year).all()
+    session.close()
+
+    if losungen:
+        return True # Already imported
+
     if download_zip(year):
         extract_zip()
         import_xml()
@@ -90,6 +100,7 @@ def initial_import():
     """Imports all available zip archives from the Losungen download page"""
     year = datetime.date.today().year
     year_iter = year
+    
     while import_year(year_iter):
         year_iter -= 1
 

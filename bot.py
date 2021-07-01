@@ -18,10 +18,11 @@ telebot.logger.setLevel(logging.INFO)
 
 
 @bot.message_handler(commands=["heute", "Heute"])
-def send_losung(message, date_query=datetime.date.today()):
+def send_losung(message, date_query=None):
     """Sends a formatted Losung for a given date to the requesting chat.
     The date defaults to the current date.
     """
+    date_query = datetime.date.today() if date_query is None else date_query
     losung = _get_losung(date_query)
     if not losung:
         date_pretty = date_query.strftime("%d.%m.%Y")
@@ -104,10 +105,11 @@ def unsubscribe(message):
     session.close()
 
 
-def _get_losung(date_query=datetime.date.today()):
+def _get_losung(date_query=None):
     """Retrieves a TagesLosung object from the database for
     a given date. The date defaults to the current date.
     """
+    date_query = datetime.date.today() if date_query is None else date_query
     session = Session()
     losung = session.query(TagesLosung).get(date_query)
     session.close()
