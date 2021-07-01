@@ -17,6 +17,25 @@ logger = telebot.logger
 telebot.logger.setLevel(logging.INFO)
 
 
+@bot.message_handler(commands=["start", "Start", "hilfe", "Hilfe", "help", "Help"])
+def usage(message):
+    """Replies with usage information"""
+    reply = """Dieser (inoffizielle) *Losungs-Bot* kann Dir täglich die Losung des Tages zuschicken.
+Außerdem kannst du die Losung eines bestimmten Tages abfragen.
+
+*Benutzung*:
+/abo - Die täglichen Losungen abonnieren
+/deabo - Das tägliche Losungs-Abo beenden
+/heute - Die heutige Losung abrufen
+/datum - Die Losung eines bestimmten Datums abrufen
+/hilfe - Diesen Hilfstext anzeigen
+
+Den Quellcode dieses Bots findest Du auf [GitHub](https://github.com/Popkornium18/telegram-losungen).
+"""
+    task = bot.send_message(message.chat.id, reply, disable_web_page_preview=True)
+    task.wait()
+
+
 @bot.message_handler(commands=["heute", "Heute"])
 def send_losung(message, date_query=None):
     """Sends a formatted Losung for a given date to the requesting chat.
