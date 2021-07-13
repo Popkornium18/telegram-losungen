@@ -3,7 +3,7 @@ from config import cfg
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-engine = create_engine(cfg["DB"], future=True)
+engine = create_engine(cfg["DB"], pool_pre_ping=True, future=True)
 Session = sessionmaker(bind=engine)
 
 Base.metadata.create_all(engine)
