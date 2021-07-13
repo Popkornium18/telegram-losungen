@@ -9,7 +9,8 @@ import schedule
 import telebot
 from config import cfg
 from losungen import Session
-from losungen.models import TagesLosung, JahresLosung, Subscriber
+from losungen.models import Subscriber
+from losungen.repositories import TagesLosungRepository, SubscriberRepository
 from importer import import_year
 
 bot = telebot.AsyncTeleBot(cfg["API_KEY"], parse_mode="MARKDOWN")
@@ -42,7 +43,10 @@ def send_losung(message, date_query=None):
     The date defaults to the current date.
     """
     date_query = datetime.date.today() if date_query is None else date_query
-    losung = _get_losung(date_query)
+    session = Session()
+    repo = TagesLosungRepository(session)
+    losung = repo.get_by_date()
+    session.close()
     if not losung:
         date_pretty = date_query.strftime("%d.%m.%Y")
         task = bot.send_message(
@@ -84,10 +88,10 @@ def send_losung_date(message):
 def subscribe(message):
     """Adds a chat to the subscriber list"""
     session = Session()
-    subscriber = session.query(Subscriber).get(message.chat.id)
+    repo = SubscriberRepository(session)
+    subscriber = repo.get_by_id(message.chat.id)
     if not subscriber:
-        subscriber = Subscriber(chat_id=message.chat.id)
-        session.add(subscriber)
+        repo.add(Subscriber(chat_id=message.chat.id))
         session.commit()
         task = bot.send_message(
             message.chat.id,
@@ -107,9 +111,10 @@ def subscribe(message):
 def unsubscribe(message):
     """Removes a chat from the subscriber list"""
     session = Session()
-    subscriber = session.query(Subscriber).get(message.chat.id)
+    repo = SubscriberRepository(session)
+    subscriber = repo.get_by_id(message.chat.id)
     if subscriber:
-        session.delete(subscriber)
+        repo.delete(subscriber)
         session.commit()
         task = bot.send_message(
             message.chat.id,
@@ -122,17 +127,6 @@ def unsubscribe(message):
         )
     task.wait()
     session.close()
-
-
-def _get_losung(date_query=None):
-    """Retrieves a TagesLosung object from the database for
-    a given date. The date defaults to the current date.
-    """
-    date_query = datetime.date.today() if date_query is None else date_query
-    session = Session()
-    losung = session.query(TagesLosung).get(date_query)
-    session.close()
-    return losung
 
 
 def _format_losung(losung):
@@ -166,7 +160,10 @@ _{lehrtext_formatted}_"""
 
 def _send_daily_losungen():
     """Triggers broadcasting of the daily Losung"""
-    losung = _get_losung()
+    session = Session()
+    repo = TagesLosungRepository(session)
+    losung = repo.get_by_date()
+    session.close()
     if losung:
         message = _format_losung(losung)
         _broadcast(message)
@@ -175,8 +172,10 @@ def _send_daily_losungen():
 def _broadcast(message):
     """Broadcasts a message to all subscribers"""
     session = Session()
+    repo = SubscriberRepository(session)
+    subscribers = repo.list()
+    session.close()
     tasks = []
-    subscribers = session.query(Subscriber).all()
     for subscriber in subscribers:
         tasks.append(
             bot.send_message(subscriber.chat_id, message, disable_web_page_preview=True)
@@ -184,7 +183,6 @@ def _broadcast(message):
 
     for task in tasks:
         task.wait()
-    session.close()
 
 
 def _setup_schedule():

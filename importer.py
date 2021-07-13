@@ -5,9 +5,9 @@ import xml.etree.ElementTree as ET
 import os
 import re
 import requests
-from sqlalchemy import extract
 from losungen import Session
 from losungen.models import TagesLosung
+from losungen.repositories import TagesLosungRepository
 
 LOSUNGEN_URL = "https://www.losungen.de/fileadmin/media-losungen/download"
 LOSUNGEN_XML = "losungen.xml"
@@ -48,6 +48,7 @@ def import_xml(filename=LOSUNGEN_XML):
     os.remove(filename)
     root = tree.getroot()
     session = Session()
+    repo = TagesLosungRepository(session)
     for day in root:
         date_str = day.find("Datum").text
         date = datetime.datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S").date()
@@ -62,16 +63,14 @@ def import_xml(filename=LOSUNGEN_XML):
         losung_verse = day.find("Losungsvers").text
         lehrtext_verse = day.find("Lehrtextvers").text
         lehrtext = day.find("Lehrtext").text
-        session.add(
-            TagesLosung(
+        repo.add(TagesLosung(
                 date=date,
                 special_date=special_date_short,
                 losung=losung,
                 losung_verse=losung_verse,
                 lehrtext=lehrtext,
                 lehrtext_verse=lehrtext_verse,
-            )
-        )
+            ))
     session.commit()
 
 
@@ -79,8 +78,9 @@ def import_year(year=None):
     """Downloads, extracts and imports the Losungen of a given year.
     The year defaults to the next year."""
     session = Session()
+    repo = TagesLosungRepository(session)
     year = datetime.date.today().year + 1 if year is None else year
-    losungen = session.query(TagesLosung).filter(extract('year', TagesLosung.date) == year).all()
+    losungen = repo.get_by_year(year)
     session.close()
 
     if losungen:
