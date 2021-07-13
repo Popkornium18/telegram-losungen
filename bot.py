@@ -45,7 +45,7 @@ def send_losung(message, date_query=None):
     date_query = datetime.date.today() if date_query is None else date_query
     session = Session()
     repo = TagesLosungRepository(session)
-    losung = repo.get_by_date()
+    losung = repo.get_by_date(date_query)
     session.close()
     if not losung:
         date_pretty = date_query.strftime("%d.%m.%Y")
