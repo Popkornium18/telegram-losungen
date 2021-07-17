@@ -22,7 +22,7 @@ telebot.logger.setLevel(logging.INFO)
 def usage(message):
     """Replies with usage information"""
     reply = """Dieser (inoffizielle) *Losungs-Bot* kann Dir täglich die Losung des Tages zuschicken.
-Außerdem kannst du die Losung eines bestimmten Tages abfragen.
+Außerdem kannst Du die Losung eines bestimmten Tages abfragen.
 
 *Benutzung*:
 /abo - Die täglichen Losungen abonnieren
