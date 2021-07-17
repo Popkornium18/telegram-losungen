@@ -197,4 +197,4 @@ def _setup_schedule():
 import_year()
 thread_schedule = threading.Thread(target=_setup_schedule)
 thread_schedule.start()
-bot.polling()
+bot.polling(none_stop=True)
