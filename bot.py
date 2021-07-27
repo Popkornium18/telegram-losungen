@@ -7,9 +7,10 @@ import logging
 import threading
 import schedule
 import telebot
+from sqlalchemy.orm import Session
 from config import cfg
-from losungen import Session
-from losungen.models import Subscriber
+from losungen import SessionMaker
+from losungen.models import Subscriber, TagesLosung
 from losungen.repositories import TagesLosungRepository, SubscriberRepository
 from importer import import_year
 
@@ -19,7 +20,7 @@ telebot.logger.setLevel(logging.INFO)
 
 
 @bot.message_handler(commands=["start", "Start", "hilfe", "Hilfe", "help", "Help"])
-def usage(message):
+def usage(message: telebot.types.Message):
     """Replies with usage information"""
     reply = """Dieser (inoffizielle) *Losungs-Bot* kann Dir täglich die Losung des Tages zuschicken.
 Außerdem kannst Du die Losung eines bestimmten Tages abfragen.
@@ -38,12 +39,12 @@ Den Quellcode dieses Bots findest Du auf [GitHub](https://github.com/Popkornium1
 
 
 @bot.message_handler(commands=["heute", "Heute"])
-def send_losung(message, date_query=None):
+def send_losung(message: telebot.types.Message, date_query: datetime.date = None):
     """Sends a formatted Losung for a given date to the requesting chat.
     The date defaults to the current date.
     """
     date_query = datetime.date.today() if date_query is None else date_query
-    session = Session()
+    session: Session = SessionMaker()
     repo = TagesLosungRepository(session)
     losung = repo.get_by_date(date_query)
     session.close()
@@ -54,13 +55,13 @@ def send_losung(message, date_query=None):
             f"Für das Datum *{date_pretty}* wurde leider keine Losung gefunden.",
         )
     else:
-        reply = _format_losung(losung)
+        reply = _format_tageslosung(losung)
         task = bot.send_message(message.chat.id, reply, disable_web_page_preview=True)
     task.wait()
 
 
 @bot.message_handler(commands=["datum", "Datum"])
-def send_losung_date(message):
+def send_losung_date(message: telebot.types.Message):
     """Parses a date that is specified as a parameter to the command
     and calls `send_losung` with that date.
     """
@@ -85,9 +86,9 @@ def send_losung_date(message):
 
 
 @bot.message_handler(commands=["abo", "Abo", "sub", "Sub"])
-def subscribe(message):
+def subscribe(message: telebot.types.Message):
     """Adds a chat to the subscriber list"""
-    session = Session()
+    session: Session = SessionMaker()
     repo = SubscriberRepository(session)
     subscriber = repo.get_by_id(message.chat.id)
     if not subscriber:
@@ -108,9 +109,9 @@ def subscribe(message):
 
 
 @bot.message_handler(commands=["deabo", "Deabo", "unsub", "Unsub"])
-def unsubscribe(message):
+def unsubscribe(message: telebot.types.Message):
     """Removes a chat from the subscriber list"""
-    session = Session()
+    session: Session = SessionMaker()
     repo = SubscriberRepository(session)
     subscriber = repo.get_by_id(message.chat.id)
     if subscriber:
@@ -129,7 +130,7 @@ def unsubscribe(message):
     session.close()
 
 
-def _format_losung(losung):
+def _format_tageslosung(losung: TagesLosung):
     """Formats a given Losung as a Markdown message"""
     url_bibleserver = "https://www.bibleserver.com/LUT/"
     days = [
@@ -142,11 +143,11 @@ def _format_losung(losung):
         "Sonntag",
     ]
     dow = days[losung.day_of_week]
-    pretty_date = losung.date.strftime("*%d.%m.%Y*")
-    losung_link = url_bibleserver + losung.losung_verse.replace(" ", "")
-    lehrtext_link = url_bibleserver + losung.lehrtext_verse.replace(" ", "")
-    losung_formatted = losung.losung.replace("/", "")
-    lehrtext_formatted = losung.lehrtext.replace("/", "")
+    pretty_date: str = losung.date.strftime("*%d.%m.%Y*")
+    losung_link: str = url_bibleserver + losung.losung_verse.replace(" ", "")
+    lehrtext_link: str = url_bibleserver + losung.lehrtext_verse.replace(" ", "")
+    losung_formatted: str = losung.losung.replace("/", "")
+    lehrtext_formatted: str = losung.lehrtext.replace("/", "")
     if losung.special_date:
         pretty_date += f" ({losung.special_date})"
 
@@ -160,18 +161,18 @@ _{lehrtext_formatted}_"""
 
 def _send_daily_losungen():
     """Triggers broadcasting of the daily Losung"""
-    session = Session()
+    session: Session = SessionMaker()
     repo = TagesLosungRepository(session)
     losung = repo.get_by_date()
     session.close()
     if losung:
-        message = _format_losung(losung)
+        message = _format_tageslosung(losung)
         _broadcast(message)
 
 
-def _broadcast(message):
+def _broadcast(message: str):
     """Broadcasts a message to all subscribers"""
-    session = Session()
+    session: Session = SessionMaker()
     repo = SubscriberRepository(session)
     subscribers = repo.list()
     session.close()

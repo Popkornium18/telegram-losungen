@@ -16,7 +16,7 @@ class TagesLosung(Base):
     lehrtext_verse = Column(String(64), nullable=False)
 
     @property
-    def day_of_week(self):
+    def day_of_week(self) -> int:
         """Returns the day of the week as a number with monday being 0"""
         return self.date.weekday()
 
