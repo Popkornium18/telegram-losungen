@@ -1,4 +1,5 @@
 """Functions for importing Losungen from the official download page"""
+from typing import List
 from zipfile import ZipFile
 import datetime
 import xml.etree.ElementTree as ET
@@ -43,13 +44,11 @@ def extract_zip(filename: str = f"{LOSUNGEN_XML}.zip"):
     os.remove(filename)
 
 
-def import_xml(filename: str = LOSUNGEN_XML):
-    """Imports all Losungen contained in the given XML file"""
+def _load_xml(filename: str):
     tree = ET.parse(LOSUNGEN_XML)
     os.remove(filename)
     root = tree.getroot()
-    session: Session = SessionMaker()
-    repo = TagesLosungRepository(session)
+    losungen: List[TagesLosung] = []
     for day in root:
         date_str = day.find("Datum").text
         date = datetime.datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S").date()
@@ -64,16 +63,25 @@ def import_xml(filename: str = LOSUNGEN_XML):
         losung_verse = day.find("Losungsvers").text
         lehrtext_verse = day.find("Lehrtextvers").text
         lehrtext = day.find("Lehrtext").text
-        repo.add(
-            TagesLosung(
-                date=date,
-                special_date=special_date_short,
-                losung=losung,
-                losung_verse=losung_verse,
-                lehrtext=lehrtext,
-                lehrtext_verse=lehrtext_verse,
-            )
+        tageslosung = TagesLosung(
+            date=date,
+            special_date=special_date_short,
+            losung=losung,
+            losung_verse=losung_verse,
+            lehrtext=lehrtext,
+            lehrtext_verse=lehrtext_verse,
         )
+        losungen.append(tageslosung)
+
+    return losungen
+
+
+def import_xml(filename: str = LOSUNGEN_XML):
+    """Imports all Losungen contained in the given XML file"""
+    session: Session = SessionMaker()
+    repo = TagesLosungRepository(session)
+    for losung in _load_xml(filename):
+        repo.add(losung)
     session.commit()
 
 
