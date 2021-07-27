@@ -195,7 +195,12 @@ def _setup_schedule():
         sleep(1)
 
 
-import_year()
-thread_schedule = threading.Thread(target=_setup_schedule)
-thread_schedule.start()
-bot.polling(none_stop=True)
+def main():
+    import_year()
+    thread_schedule = threading.Thread(target=_setup_schedule)
+    thread_schedule.start()
+    bot.polling(none_stop=True)
+
+
+if __name__ == "__main__":
+    main()
