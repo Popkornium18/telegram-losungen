@@ -5,7 +5,8 @@ import xml.etree.ElementTree as ET
 import os
 import re
 import requests
-from losungen import Session
+from sqlalchemy.orm import Session
+from losungen import SessionMaker
 from losungen.models import TagesLosung
 from losungen.repositories import TagesLosungRepository
 
@@ -13,7 +14,7 @@ LOSUNGEN_URL = "https://www.losungen.de/fileadmin/media-losungen/download"
 LOSUNGEN_XML = "losungen.xml"
 
 
-def download_zip(year):
+def download_zip(year: int) -> bool:
     """Downloads the zipped XML file containing the Losungen of the given year"""
     url = f"{LOSUNGEN_URL}/Losung_{year}_XML.zip"
     try:
@@ -28,7 +29,7 @@ def download_zip(year):
     return True
 
 
-def extract_zip(filename=f"{LOSUNGEN_XML}.zip"):
+def extract_zip(filename: str = f"{LOSUNGEN_XML}.zip"):
     """Extracts the XML file from a Losungen zip file"""
     with ZipFile(filename) as zipfile:
         with open(LOSUNGEN_XML, "wb") as xmlfile:
@@ -42,12 +43,12 @@ def extract_zip(filename=f"{LOSUNGEN_XML}.zip"):
     os.remove(filename)
 
 
-def import_xml(filename=LOSUNGEN_XML):
+def import_xml(filename: str = LOSUNGEN_XML):
     """Imports all Losungen contained in the given XML file"""
     tree = ET.parse(LOSUNGEN_XML)
     os.remove(filename)
     root = tree.getroot()
-    session = Session()
+    session: Session = SessionMaker()
     repo = TagesLosungRepository(session)
     for day in root:
         date_str = day.find("Datum").text
@@ -63,28 +64,30 @@ def import_xml(filename=LOSUNGEN_XML):
         losung_verse = day.find("Losungsvers").text
         lehrtext_verse = day.find("Lehrtextvers").text
         lehrtext = day.find("Lehrtext").text
-        repo.add(TagesLosung(
+        repo.add(
+            TagesLosung(
                 date=date,
                 special_date=special_date_short,
                 losung=losung,
                 losung_verse=losung_verse,
                 lehrtext=lehrtext,
                 lehrtext_verse=lehrtext_verse,
-            ))
+            )
+        )
     session.commit()
 
 
-def import_year(year=None):
+def import_year(year: int = None) -> bool:
     """Downloads, extracts and imports the Losungen of a given year.
     The year defaults to the next year."""
-    session = Session()
+    session: Session = SessionMaker()
     repo = TagesLosungRepository(session)
     year = datetime.date.today().year + 1 if year is None else year
     losungen = repo.get_by_year(year)
     session.close()
 
     if losungen:
-        return True # Already imported
+        return True  # Already imported
 
     if download_zip(year):
         extract_zip()
@@ -100,7 +103,7 @@ def initial_import():
     """Imports all available zip archives from the Losungen download page"""
     year = datetime.date.today().year
     year_iter = year
-    
+
     while import_year(year_iter):
         year_iter -= 1
 
