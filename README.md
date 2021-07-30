@@ -27,6 +27,14 @@ pip install wheel
 pip install -r requirements.txt
 ```
 
+If you intend to use `systemd` for logging, you have to install the optional dependencies as well.
+Make sure that you have the `systemd` header files installed.
+On Debian/Ubuntu these headers are provided by `libsystemd-dev`.
+
+```
+pip install -r optional-requirements.txt
+```
+
 After that you can import all available Losungen from the official download page.
 Note that while the Losungen exist for literally multiple centuries, only the last ~2 years are distributed online.
 
