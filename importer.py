@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 import os
 import re
 import requests
+import logging
 from sqlalchemy.orm import Session
 from losungen import SessionMaker
 from losungen.models import TagesLosung
@@ -13,6 +14,8 @@ from losungen.repositories import TagesLosungRepository
 
 LOSUNGEN_URL = "https://www.losungen.de/fileadmin/media-losungen/download"
 LOSUNGEN_XML = "losungen.xml"
+
+logger = logging.getLogger(__name__)
 
 
 def download_zip(year: int) -> bool:
@@ -22,9 +25,9 @@ def download_zip(year: int) -> bool:
         response = requests.get(url, allow_redirects=True)
         if response.status_code == 404:
             return False
+        logger.info("Successfully downloaded %s", url)
     except requests.exceptions.RequestException as exc:
-        print(f"Unable to download {url}")
-        print(exc)
+        logger.exception("Unable to download %s", url)
         return False
     open(f"{LOSUNGEN_XML}.zip", "wb").write(response.content)
     return True
@@ -42,6 +45,7 @@ def extract_zip(filename: str = f"{LOSUNGEN_XML}.zip"):
                 ][0]
             )
     os.remove(filename)
+    logger.info("Successfully extracted %s", filename)
 
 
 def _load_xml(filename: str):
@@ -100,10 +104,10 @@ def import_year(year: int = None) -> bool:
     if download_zip(year):
         extract_zip()
         import_xml()
-        print(f"Successfully imported Losungen for {year}")
+        logger.info("Successfully imported Losungen for %i", year)
         return True
 
-    print(f"Failed to download zip archive for {year}")
+    logger.warning("Failed to download zip archive for %i", year)
     return False
 
 

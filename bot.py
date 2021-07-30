@@ -11,12 +11,33 @@ from sqlalchemy.orm import Session
 from config import cfg
 from losungen import SessionMaker
 from losungen.models import Subscriber, TagesLosung
-from losungen.repositories import TagesLosungRepository, SubscriberRepository
-from importer import import_year
+from losungen.repositories import (
+    TagesLosungRepository,
+    SubscriberRepository,
+    logger as repologger,
+)
+from importer import import_year, logger as importlogger
+
+if cfg["LOG"] == "systemd":
+    from cysystemd.journal import JournaldLogHandler
+
+    log_handler = JournaldLogHandler()
+    log_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+else:
+    log_handler = logging.StreamHandler()
+    log_handler.setFormatter(
+        logging.Formatter("[%(name)s:%(asctime)s:%(levelname)s] %(message)s")
+    )
+
 
 bot = telebot.AsyncTeleBot(cfg["API_KEY"], parse_mode="MARKDOWN")
-logger = telebot.logger
-telebot.logger.setLevel(logging.INFO)
+
+log_handler.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+logger.addHandler(log_handler)
+telebot.logger.addHandler(log_handler)
+repologger.addHandler(log_handler)
+importlogger.addHandler(log_handler)
 
 
 @bot.message_handler(commands=["start", "Start", "hilfe", "Hilfe", "help", "Help"])
@@ -44,6 +65,7 @@ def send_losung(message: telebot.types.Message, date_query: datetime.date = None
     The date defaults to the current date.
     """
     date_query = datetime.date.today() if date_query is None else date_query
+    logger.info("Requesting TagesLosung of %s", date_query)
     session: Session = SessionMaker()
     repo = TagesLosungRepository(session)
     losung = repo.get_by_date(date_query)
@@ -54,6 +76,7 @@ def send_losung(message: telebot.types.Message, date_query: datetime.date = None
             message.chat.id,
             f"Für das Datum *{date_pretty}* wurde leider keine Losung gefunden.",
         )
+        logger.warning("No TagesLosung found for %s", date_query)
     else:
         reply = _format_tageslosung(losung)
         task = bot.send_message(message.chat.id, reply, disable_web_page_preview=True)
@@ -184,6 +207,7 @@ def _broadcast(message: str):
 
     for task in tasks:
         task.wait()
+    logger.info("Broadcast sent to %i subscribers", len(subscribers))
 
 
 def _setup_schedule():
