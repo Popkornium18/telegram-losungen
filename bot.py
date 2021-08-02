@@ -38,7 +38,7 @@ telebot.logger.setLevel(logging.INFO)
 
 
 @bot.message_handler(commands=["start", "Start", "hilfe", "Hilfe", "help", "Help"])
-def usage(message: telebot.types.Message):
+def usage(message: telebot.types.Message) -> None:
     """Replies with usage information"""
     reply = """Dieser (inoffizielle) *Losungs-Bot* kann Dir täglich die Losung des Tages zuschicken.
 Außerdem kannst Du die Losung eines bestimmten Tages abfragen.
@@ -57,7 +57,7 @@ Den Quellcode dieses Bots findest Du auf [GitHub](https://github.com/Popkornium1
 
 
 @bot.message_handler(commands=["heute", "Heute"])
-def send_losung(message: telebot.types.Message, date_query: datetime.date = None):
+def send_losung(message: telebot.types.Message, date_query: datetime.date = None) -> None:
     """Sends a formatted Losung for a given date to the requesting chat.
     The date defaults to the current date.
     """
@@ -81,7 +81,7 @@ def send_losung(message: telebot.types.Message, date_query: datetime.date = None
 
 
 @bot.message_handler(commands=["datum", "Datum"])
-def send_losung_date(message: telebot.types.Message):
+def send_losung_date(message: telebot.types.Message) -> None:
     """Parses a date that is specified as a parameter to the command
     and calls `send_losung` with that date.
     """
@@ -106,7 +106,7 @@ def send_losung_date(message: telebot.types.Message):
 
 
 @bot.message_handler(commands=["abo", "Abo", "sub", "Sub"])
-def subscribe(message: telebot.types.Message):
+def subscribe(message: telebot.types.Message) -> None:
     """Adds a chat to the subscriber list"""
     session: Session = SessionMaker()
     repo = SubscriberRepository(session)
@@ -129,7 +129,7 @@ def subscribe(message: telebot.types.Message):
 
 
 @bot.message_handler(commands=["deabo", "Deabo", "unsub", "Unsub"])
-def unsubscribe(message: telebot.types.Message):
+def unsubscribe(message: telebot.types.Message) -> None:
     """Removes a chat from the subscriber list"""
     session: Session = SessionMaker()
     repo = SubscriberRepository(session)
@@ -150,7 +150,7 @@ def unsubscribe(message: telebot.types.Message):
     session.close()
 
 
-def _format_tageslosung(losung: TagesLosung):
+def _format_tageslosung(losung: TagesLosung) -> None:
     """Formats a given Losung as a Markdown message"""
     url_bibleserver = "https://www.bibleserver.com/LUT/"
     days = [
@@ -179,7 +179,7 @@ _{lehrtext_formatted}_"""
     return reply
 
 
-def _send_daily_losungen():
+def _send_daily_losungen() -> None:
     """Triggers broadcasting of the daily Losung"""
     session: Session = SessionMaker()
     repo = TagesLosungRepository(session)
@@ -190,7 +190,7 @@ def _send_daily_losungen():
         _broadcast(message)
 
 
-def _broadcast(message: str):
+def _broadcast(message: str) -> None:
     """Broadcasts a message to all subscribers"""
     session: Session = SessionMaker()
     repo = SubscriberRepository(session)
@@ -207,7 +207,7 @@ def _broadcast(message: str):
     logger.info("Broadcast sent to %i subscribers", len(subscribers))
 
 
-def _setup_schedule():
+def _setup_schedule() -> None:
     """Sets up and runs recurring jobs"""
     schedule.every().day.at("08:00").do(_send_daily_losungen)
     schedule.every(1).week.do(import_year)
@@ -216,7 +216,7 @@ def _setup_schedule():
         sleep(1)
 
 
-def main():
+def main() -> None:
     import_year()
     thread_schedule = threading.Thread(target=_setup_schedule)
     thread_schedule.start()

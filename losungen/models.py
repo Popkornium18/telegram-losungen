@@ -20,7 +20,7 @@ class TagesLosung(Base):
         """Returns the day of the week as a number with monday being 0"""
         return self.date.weekday()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"""TagesLosung(
   {self.date},
   {self.special_date},
@@ -40,7 +40,7 @@ class JahresLosung(Base):
     losung = Column(String(512), nullable=False)
     losung_verse = Column(String(64), nullable=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"""JahresLosung(
   {self.year},
   {self.losung},
@@ -54,5 +54,5 @@ class Subscriber(Base):
     __tablename__ = "subscribers"
     chat_id = Column(BigInteger, primary_key=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Subscriber({self.chat_id})"

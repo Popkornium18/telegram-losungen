@@ -33,7 +33,7 @@ def download_zip(year: int) -> bool:
     return True
 
 
-def extract_zip(filename: str = f"{LOSUNGEN_XML}.zip"):
+def extract_zip(filename: str = f"{LOSUNGEN_XML}.zip") -> None:
     """Extracts the XML file from a Losungen zip file"""
     with ZipFile(filename) as zipfile:
         with open(LOSUNGEN_XML, "wb") as xmlfile:
@@ -48,7 +48,7 @@ def extract_zip(filename: str = f"{LOSUNGEN_XML}.zip"):
     logger.info("Successfully extracted %s", filename)
 
 
-def _load_xml(filename: str):
+def _load_xml(filename: str) -> None:
     tree = ET.parse(LOSUNGEN_XML)
     os.remove(filename)
     root = tree.getroot()
@@ -80,7 +80,7 @@ def _load_xml(filename: str):
     return losungen
 
 
-def import_xml(filename: str = LOSUNGEN_XML):
+def import_xml(filename: str = LOSUNGEN_XML) -> None:
     """Imports all Losungen contained in the given XML file"""
     session: Session = SessionMaker()
     repo = TagesLosungRepository(session)
@@ -111,7 +111,7 @@ def import_year(year: int = None) -> bool:
     return False
 
 
-def initial_import():
+def initial_import() -> None:
     """Imports all available zip archives from the Losungen download page"""
     year = datetime.date.today().year
     year_iter = year

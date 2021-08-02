@@ -12,10 +12,10 @@ logger = logging.getLogger("telegram-losungen.repositories")
 class TagesLosungRepository:
     """Repository for TagesLosung objects"""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
-    def add(self, losung: TagesLosung):
+    def add(self, losung: TagesLosung) -> None:
         """Persist a new TagesLosung object"""
         self.session.add(losung)
         logger.info("Added new TagesLosung for %s", losung.date)
@@ -44,10 +44,10 @@ class TagesLosungRepository:
 class JahresLosungRepository:
     """Repository for JahresLosung objects"""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
-    def add(self, losung: JahresLosung):
+    def add(self, losung: JahresLosung) -> None:
         """Persist a new JahresLosung object"""
         self.session.add(losung)
         logger.info("Added new JahresLosung for %s", losung.year)
@@ -66,15 +66,15 @@ class JahresLosungRepository:
 class SubscriberRepository:
     """Repository for Subscriber objects"""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
-    def add(self, subscriber: Subscriber):
+    def add(self, subscriber: Subscriber) -> None:
         """Persist a new Subscriber object"""
         self.session.add(subscriber)
         logger.info("Added new subscriber %i", subscriber.chat_id)
 
-    def delete(self, subscriber: Subscriber):
+    def delete(self, subscriber: Subscriber) -> None:
         """Delete an existing Subscriber object from the database"""
         self.session.delete(subscriber)
         logger.info("Deleted subscriber %i", subscriber.chat_id)
