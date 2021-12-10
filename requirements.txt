@@ -4,5 +4,5 @@ idna==3.3
 pyTelegramBotAPI==4.2.2
 requests==2.26.0
 schedule==1.1.0
-SQLAlchemy==1.4.27
+SQLAlchemy==1.4.28
 urllib3==1.26.7
