@@ -5,8 +5,11 @@ import datetime
 from time import sleep
 import logging
 import threading
+from typing import Any, Coroutine, List
 import schedule
-import telebot
+from telebot.async_telebot import AsyncTeleBot
+from telebot import logger as telebot_logger
+from telebot.types import Message
 from sqlalchemy.orm import Session
 from config import cfg
 from losungen import SessionMaker
@@ -26,19 +29,19 @@ else:
     )
 
 
-bot = telebot.AsyncTeleBot(cfg["API_KEY"], parse_mode="MARKDOWN")
+bot = AsyncTeleBot(cfg["API_KEY"], parse_mode="MARKDOWN")
 
 logger = logging.getLogger("telegram-losungen")
 logger.addHandler(log_handler)
-telebot.logger.handlers = []
-telebot.logger.parent = logger
+telebot_logger.handlers = []
+telebot_logger.parent = logger
 log_handler.setLevel(logging.INFO)
 logger.setLevel(logging.INFO)
-telebot.logger.setLevel(logging.INFO)
+telebot_logger.setLevel(logging.INFO)
 
 
 @bot.message_handler(commands=["start", "Start", "hilfe", "Hilfe", "help", "Help"])
-def usage(message: telebot.types.Message) -> None:
+async def usage(message: Message) -> None:
     """Replies with usage information"""
     reply = """Dieser (inoffizielle) *Losungs-Bot* kann Dir täglich die Losung des Tages zuschicken.
 Außerdem kannst Du die Losung eines bestimmten Tages abfragen.
@@ -52,12 +55,11 @@ Außerdem kannst Du die Losung eines bestimmten Tages abfragen.
 
 Den Quellcode dieses Bots findest Du auf [GitHub](https://github.com/Popkornium18/telegram-losungen).
 """
-    task = bot.send_message(message.chat.id, reply, disable_web_page_preview=True)
-    task.wait()
+    await bot.send_message(message.chat.id, reply, disable_web_page_preview=True)
 
 
 @bot.message_handler(commands=["heute", "Heute"])
-def send_losung(message: telebot.types.Message, date_query: datetime.date = None) -> None:
+async def send_losung(message: Message, date_query: datetime.date = None) -> None:
     """Sends a formatted Losung for a given date to the requesting chat.
     The date defaults to the current date.
     """
@@ -69,44 +71,43 @@ def send_losung(message: telebot.types.Message, date_query: datetime.date = None
     session.close()
     if not losung:
         date_pretty = date_query.strftime("%d.%m.%Y")
-        task = bot.send_message(
+        await bot.send_message(
             message.chat.id,
             f"Für das Datum *{date_pretty}* wurde leider keine Losung gefunden.",
         )
         logger.warning("No TagesLosung found for %s", date_query)
     else:
         reply = _format_tageslosung(losung)
-        task = bot.send_message(message.chat.id, reply, disable_web_page_preview=True)
-    task.wait()
+        await bot.send_message(message.chat.id, reply, disable_web_page_preview=True)
 
 
 @bot.message_handler(commands=["datum", "Datum"])
-def send_losung_date(message: telebot.types.Message) -> None:
+async def send_losung_date(message: Message) -> None:
     """Parses a date that is specified as a parameter to the command
     and calls `send_losung` with that date.
     """
+    if not message.text:
+        return
     request = message.text.split()
     if len(request) < 2:
         yesterday = (datetime.date.today() - datetime.timedelta(1)).strftime("%d.%m.%Y")
-        task = bot.send_message(message.chat.id, f"Benutzung: /datum {yesterday}")
-        task.wait()
+        await bot.send_message(message.chat.id, f"Benutzung: /datum {yesterday}")
         return
 
     try:
         date_query = datetime.datetime.strptime(request[1], "%d.%m.%Y").date()
-        send_losung(message, date_query)
+        await send_losung(message, date_query)
     except ValueError:
         yesterday = (datetime.date.today() - datetime.timedelta(1)).strftime("%d.%m.%Y")
-        task = bot.send_message(
+        await bot.send_message(
             message.chat.id,
             f"Das Datum hat nicht das richtige Format. Benutzung: /datum {yesterday}",
         )
-        task.wait()
         return
 
 
 @bot.message_handler(commands=["abo", "Abo", "sub", "Sub"])
-def subscribe(message: telebot.types.Message) -> None:
+async def subscribe(message: Message) -> None:
     """Adds a chat to the subscriber list"""
     session: Session = SessionMaker()
     repo = SubscriberRepository(session)
@@ -114,22 +115,20 @@ def subscribe(message: telebot.types.Message) -> None:
     if not subscriber:
         repo.add(Subscriber(chat_id=message.chat.id))
         session.commit()
-        task = bot.send_message(
+        await bot.send_message(
             message.chat.id,
             "Du bekommst jetzt täglich die Losungen. Benutze /deabo zum Stoppen.",
         )
     else:
-        task = bot.send_message(
+        await bot.send_message(
             message.chat.id,
             "Du hast die täglichen Losungen schon abonniert. Benutze /deabo zum Stoppen.",
         )
-
-    task.wait()
     session.close()
 
 
 @bot.message_handler(commands=["deabo", "Deabo", "unsub", "Unsub"])
-def unsubscribe(message: telebot.types.Message) -> None:
+async def unsubscribe(message: Message) -> None:
     """Removes a chat from the subscriber list"""
     session: Session = SessionMaker()
     repo = SubscriberRepository(session)
@@ -137,20 +136,19 @@ def unsubscribe(message: telebot.types.Message) -> None:
     if subscriber:
         repo.delete(subscriber)
         session.commit()
-        task = bot.send_message(
+        await bot.send_message(
             message.chat.id,
             "Du bekommst jetzt keine täglichen Losungen mehr.",
         )
     else:
-        task = bot.send_message(
+        await bot.send_message(
             message.chat.id,
             "Du hast die täglichen Losungen nicht abonniert. Benutze /abo zum abonnieren.",
         )
-    task.wait()
     session.close()
 
 
-def _format_tageslosung(losung: TagesLosung) -> None:
+def _format_tageslosung(losung: TagesLosung) -> str:
     """Formats a given Losung as a Markdown message"""
     url_bibleserver = "https://www.bibleserver.com/LUT/"
     days = [
@@ -179,7 +177,7 @@ _{lehrtext_formatted}_"""
     return reply
 
 
-def _send_daily_losungen() -> None:
+async def _send_daily_losungen() -> None:
     """Triggers broadcasting of the daily Losung"""
     session: Session = SessionMaker()
     repo = TagesLosungRepository(session)
@@ -187,23 +185,23 @@ def _send_daily_losungen() -> None:
     session.close()
     if losung:
         message = _format_tageslosung(losung)
-        _broadcast(message)
+        await _broadcast(message)
 
 
-def _broadcast(message: str) -> None:
+async def _broadcast(message: str) -> None:
     """Broadcasts a message to all subscribers"""
     session: Session = SessionMaker()
     repo = SubscriberRepository(session)
     subscribers = repo.list()
     session.close()
-    tasks = []
+    tasks: List[Coroutine[Any, Any, Message]] = []
     for subscriber in subscribers:
         tasks.append(
             bot.send_message(subscriber.chat_id, message, disable_web_page_preview=True)
         )
 
     for task in tasks:
-        task.wait()
+        await task
     logger.info("Broadcast sent to %i subscribers", len(subscribers))
 
 
