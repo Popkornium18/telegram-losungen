@@ -2,7 +2,7 @@ aiohttp==3.8.1
 certifi==2021.10.8
 chardet==4.0.0
 idna==3.3
-pyTelegramBotAPI==4.2.2
+pyTelegramBotAPI==4.5.0
 requests==2.27.0
 schedule==1.1.0
 SQLAlchemy==1.4.29
